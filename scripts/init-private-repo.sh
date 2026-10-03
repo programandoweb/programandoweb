@@ -197,6 +197,8 @@ fix_target_permissions() {
   fi
 
   chown -R "$owner:$group" "$TARGET_DIR"
+  find "$TARGET_DIR" -type d -exec chmod u+rwx,go+rx {} +
+  find "$TARGET_DIR" -type f -exec chmod u+rw,go+r {} +
 }
 
 run_project_bootstrap() {
