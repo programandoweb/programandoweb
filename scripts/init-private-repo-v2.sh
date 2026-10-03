@@ -103,8 +103,9 @@ authenticate_github() {
     return
   fi
   log "Se requiere autenticación inicial para registrar la Deploy Key."
-  printf 'GitHub mostrará una URL/código para autorizar este VPS.\n\n'
-  gh auth login --hostname github.com --web
+  printf 'GitHub mostrará un código de un solo uso.\n'
+  printf 'Abre https://github.com/login/device en tu PC o celular, introduce el código y autoriza el VPS.\n\n'
+  GH_BROWSER=/bin/true BROWSER=/bin/true gh auth login --hostname github.com --web
 }
 
 register_deploy_key() {
