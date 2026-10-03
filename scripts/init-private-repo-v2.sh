@@ -141,7 +141,14 @@ clone_or_update() {
     git -c safe.directory="$TARGET_DIR" -C "$TARGET_DIR" reset --hard "origin/$default_branch"
   else
     if [[ -n "$(find "$TARGET_DIR" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]; then
-      die "$TARGET_DIR no está vacío. Usa un directorio vacío o un repositorio Git existente."
+      local backup_dir
+      backup_dir="${TARGET_DIR}.backup-$(date +%Y%m%d-%H%M%S)"
+      log "$TARGET_DIR no es un repositorio Git y contiene archivos."
+      log "Moviendo su contenido a $backup_dir antes de clonar."
+      mkdir -p "$backup_dir"
+      shopt -s dotglob nullglob
+      mv "$TARGET_DIR"/* "$backup_dir"/
+      shopt -u dotglob nullglob
     fi
     GIT_SSH_COMMAND="ssh -F $SSH_CONFIG" git clone "$remote" "$TARGET_DIR"
   fi
