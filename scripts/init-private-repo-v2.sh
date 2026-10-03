@@ -186,14 +186,16 @@ clone_or_update() {
 
 run_project_bootstrap() {
   local bootstrap="$TARGET_DIR/scripts/bootstrap-vps.sh"
-  if [[ ! -f "$bootstrap" ]]; then
-    log "Repositorio clonado correctamente."
-    printf 'No existe %s; no hay bootstrap de proyecto que ejecutar.\n' "$bootstrap"
-    return
-  fi
+
+  [[ -f "$bootstrap" ]] || die "El repositorio fue descargado, pero no existe $bootstrap."
+
   chmod +x "$bootstrap"
-  log "Ejecutando bootstrap del proyecto..."
-  (cd "$TARGET_DIR" && bash "$bootstrap")
+
+  log "Repositorio preparado correctamente."
+  log "Ejecutando inmediatamente $bootstrap ..."
+
+  cd "$TARGET_DIR"
+  bash "$bootstrap"
 }
 
 summary() {
