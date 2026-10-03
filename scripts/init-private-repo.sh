@@ -104,7 +104,7 @@ authenticate_github() {
   fi
   log "Se requiere autenticación inicial para registrar la Deploy Key."
   printf 'GitHub mostrará una URL/código para autorizar este VPS.\n\n'
-  gh auth login --hostname github.com --git-protocol ssh --web
+  gh auth login --hostname github.com --web
 }
 
 register_deploy_key() {
@@ -117,7 +117,11 @@ register_deploy_key() {
     log "La Deploy Key ya está registrada."
     return
   fi
-  gh repo deploy-key add "$KEY_FILE.pub" --repo "$REPOSITORY" --title "$title"
+  gh api --method POST "repos/$REPOSITORY/keys" \
+    -f "title=$title" \
+    -f "key=$public_key" \
+    -F "read_only=true" >/dev/null
+
   log "Deploy Key de solo lectura registrada correctamente."
 }
 
