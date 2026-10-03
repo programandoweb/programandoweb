@@ -109,20 +109,48 @@ authenticate_github() {
 }
 
 register_deploy_key() {
-  local title public_key existing
+  local title public_key normalized_key existing tmp_file http_code
   title="$(basename "$TARGET_DIR")-$(hostname)"
   public_key="$(cat "$KEY_FILE.pub")"
+  normalized_key="$(awk '{print $1" "$2}' "$KEY_FILE.pub")"
+
   log "Verificando Deploy Key en $REPOSITORY..."
-  existing="$(gh api "repos/$REPOSITORY/keys" --paginate --jq ".[] | select(.key == \"$public_key\") | .id" 2>/dev/null | head -n 1 || true)"
+
+  existing="$(gh api "repos/$REPOSITORY/keys" --paginate \
+    --jq '.[] | [.id, .key] | @tsv' 2>/dev/null \
+    | awk -F '\t' -v wanted="$normalized_key" '{
+        split($2, p, " ");
+        candidate=p[1]" "p[2];
+        if (candidate == wanted) { print $1; exit }
+      }' || true)"
+
   if [[ -n "$existing" ]]; then
-    log "La Deploy Key ya está registrada."
+    log "La Deploy Key ya está registrada (ID $existing)."
     return
   fi
+
+  tmp_file="$(mktemp)"
+  set +e
   gh api --method POST "repos/$REPOSITORY/keys" \
     -f "title=$title" \
     -f "key=$public_key" \
-    -F "read_only=true" >/dev/null
+    -F "read_only=true" >"$tmp_file" 2>&1
+  http_code=$?
+  set -e
 
+  if [[ "$http_code" -ne 0 ]]; then
+    if grep -qiE 'Validation Failed|key is already in use|key already in use|already exists' "$tmp_file"; then
+      log "GitHub indica que esta Deploy Key ya existe. Continuando."
+      rm -f "$tmp_file"
+      return
+    fi
+
+    cat "$tmp_file" >&2
+    rm -f "$tmp_file"
+    die "No fue posible registrar la Deploy Key en GitHub."
+  fi
+
+  rm -f "$tmp_file"
   log "Deploy Key de solo lectura registrada correctamente."
 }
 
