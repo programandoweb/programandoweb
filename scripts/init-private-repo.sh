@@ -184,6 +184,24 @@ clone_or_update() {
   git -c safe.directory="$TARGET_DIR" -C "$TARGET_DIR" remote set-url origin "$remote"
 }
 
+
+fix_target_permissions() {
+  local owner group
+
+  owner="${SUDO_USER:-root}"
+  if [[ "$owner" == "root" ]]; then
+    group="root"
+  else
+    group="$(id -gn "$owner")"
+  fi
+
+  chown -R "$owner:$group" "$TARGET_DIR"
+  find "$TARGET_DIR" -type d -exec chmod u+rwx,go+rx {} +
+  find "$TARGET_DIR" -type f -exec chmod u+rw,go+r {} +
+  chmod +x "$TARGET_DIR/scripts/bootstrap-vps.sh" 2>/dev/null || true
+  chmod +x "$TARGET_DIR/scripts/deploy.sh" 2>/dev/null || true
+}
+
 run_project_bootstrap() {
   local bootstrap="$TARGET_DIR/scripts/bootstrap-vps.sh"
 
@@ -217,7 +235,9 @@ main() {
   authenticate_github
   register_deploy_key
   clone_or_update
+  fix_target_permissions
   run_project_bootstrap
+  fix_target_permissions
   summary
 }
 
