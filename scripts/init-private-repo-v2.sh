@@ -162,6 +162,7 @@ clone_or_update() {
 
   if [[ -d "$TARGET_DIR/.git" ]]; then
     git -c safe.directory="$TARGET_DIR" -C "$TARGET_DIR" remote set-url origin "$remote"
+    git -c safe.directory="$TARGET_DIR" -C "$TARGET_DIR" reset --hard HEAD
     GIT_SSH_COMMAND="ssh -F $SSH_CONFIG" git -c safe.directory="$TARGET_DIR" -C "$TARGET_DIR" fetch origin
     default_branch="$(GIT_SSH_COMMAND="ssh -F $SSH_CONFIG" git ls-remote --symref "$remote" HEAD 2>/dev/null | awk '/^ref:/ {sub("refs/heads/","",$2); print $2; exit}')"
     default_branch="${default_branch:-main}"
@@ -196,18 +197,12 @@ fix_target_permissions() {
   fi
 
   chown -R "$owner:$group" "$TARGET_DIR"
-  find "$TARGET_DIR" -type d -exec chmod u+rwx,go+rx {} +
-  find "$TARGET_DIR" -type f -exec chmod u+rw,go+r {} +
-  chmod +x "$TARGET_DIR/scripts/bootstrap-vps.sh" 2>/dev/null || true
-  chmod +x "$TARGET_DIR/scripts/deploy.sh" 2>/dev/null || true
 }
 
 run_project_bootstrap() {
   local bootstrap="$TARGET_DIR/scripts/bootstrap-vps.sh"
 
   [[ -f "$bootstrap" ]] || die "El repositorio fue descargado, pero no existe $bootstrap."
-
-  chmod +x "$bootstrap"
 
   log "Repositorio preparado correctamente."
   log "Ejecutando inmediatamente $bootstrap ..."
